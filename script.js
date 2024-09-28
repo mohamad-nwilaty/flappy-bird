@@ -5,6 +5,7 @@ canvas.height = innerHeight;
 const maxVelocity = 7;
 let gameState = true ;
 let score = 0 ;
+let pipeSpeed = 3 ;
 let bestScore = localStorage.getItem("bestscore")||0 ;
 let audio = new Audio("./sfx_point.mp3");
 let specialAudio = new Audio("./yipee.mp3");
@@ -33,11 +34,27 @@ class Bird{
         this.velocity = 0 ;
         this.width = 50; // for the image
         this.height = 35;
+        this.rotation = 0
     }
     draw(){
-        ctx.beginPath();
-        ctx.drawImage(birdImage , this.x , this.y , this.width , this.height)
-        ctx.closePath();         
+         // Calculate rotation based on velocity
+         this.rotation = Math.min(Math.max(this.velocity / 10, -1), 1); // Limit the rotation
+
+         // Save the canvas state before applying transformations
+         ctx.save();
+         
+         // Move the canvas origin to the bird's position for rotation
+         ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+ 
+         // Rotate the canvas based on bird's velocity
+         ctx.rotate(this.rotation);
+ 
+         // Draw the bird at its new rotated position (after rotating, shift the bird's image back)
+         ctx.drawImage(birdImage, -this.width / 2, -this.height / 2, this.width, this.height);
+ 
+         // Restore the canvas state
+         ctx.restore();
+                
     }
 }
 class Pipe {
@@ -61,7 +78,8 @@ const bird = new Bird(100,100);
 let p = new Pipe(200) ;
 setInterval(()=>{
     createPipe();
-},2000)
+    console.log(pipeRate)
+},1600)
 deathScreen() // this is a bug that i couldnt fix the first time I call the death screen function it doesnt use the correct font I tried everything and it didnt work even chat gpt gave up so I just call it at the start once and it works fine after
 window.requestAnimationFrame(animate);
 
@@ -77,7 +95,7 @@ function animate(){
     bird.y += bird.velocity;
     // deraw and move pipes
     for(let i=0 ; i<pipes.length ; i++){
-        pipes[i].x -=2 ;
+        pipes[i].x -= pipeSpeed ;
         pipes[i].draw();
 
         if(checkCollision(pipes[i])){
@@ -118,8 +136,9 @@ function checkCollision(pipe){
     if(bird.x + bird.width > pipe.x  && bird.x < pipe.x + pipeWidth ){
         if(bird.x  > pipe.x  && !pipe.scored){ //increment the score
             score ++ ;
-            if(score % 10 === 0){
-                specialAudio.play()
+            if(score % 3 === 0){
+                specialAudio.play();
+                pipeSpeed ++ ;
             }
             else{
                 audio.play()
@@ -139,14 +158,15 @@ function drawBackground(){
     ctx.drawImage(background ,0,0,canvas.width,canvas.height)
 }
 function drawScore(){
-    ctx.font = "24px flappy-font1";
-    ctx.fillText(`${score}`,10,25);
+    ctx.font = "30px flappy-font1";
+    ctx.fillText(`${score}`,20,35);
 }
 function resetGame(){
     gameState = true;
     pipes = [];
     bird.y = 200;
     score = 0
+    pipeSpeed =3;
     requestAnimationFrame(animate);
 }
 
@@ -170,15 +190,19 @@ function deathScreen() {
 }
 
 window.addEventListener("keydown" , (e)=>{
-    console.log(e.key)
     if(e.key === 'Enter'){
         gameState = false ;
     }
     if(e.key === "w" || e.key === " " ){
-        console.log("yes")
         if(!gameState){
             resetGame()
         }
         bird.velocity = -10 ;
     }
+})
+window.addEventListener("click",()=>{
+    if(!gameState){
+        resetGame()
+    }
+    bird.velocity = -10 ;
 })
